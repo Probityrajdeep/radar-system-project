@@ -1,0 +1,95 @@
+#include <WiFi.h>
+#include <ESPAsyncWebServer.h>
+#include <Servo.h>
+
+// Network credentials
+const char* ssid = "your_SSID";
+const char* password = "your_PASSWORD";
+
+// Create AsyncWebServer object on port 80
+AsyncWebServer server(80);
+
+// Define Servo motor
+Servo myservo;
+const int servoPin = 13;
+
+// Define Ultrasonic Sensor pins
+const int trigPin = 5;
+const int echoPin = 18;
+
+// Variables for calculating distance
+long duration;
+int distance;
+
+// Variable to store HTML content
+String html = "";
+
+// Function to measure distance
+int measureDistance() {
+  digitalWrite(trigPin, LOW);
+  delayMicroseconds(2);
+  digitalWrite(trigPin, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(trigPin, LOW);
+  duration = pulseIn(echoPin, HIGH);
+  return duration * 0.034 / 2;
+}
+
+// Function to generate HTML content
+String generateHTML(int angle, int distance) {
+  String html = "<html><head><title>Radar</title></head><body>";
+  html += "<h1>Radar Data</h1>";
+  html += "<p>Angle: " + String(angle) + " degrees</p>";
+  html += "<p>Distance: " + String(distance) + " cm</p>";
+  html += "<button onclick=\"location.href='/set?angle=15'\">Set Angle to 15</button>";
+  html += "<button onclick=\"location.href='/set?angle=125'\">Set Angle to 125</button>";
+  html += "</body></html>";
+  return html;
+}
+
+void setup() {
+  // Initialize Serial Monitor
+  Serial.begin(115200);
+
+  // Initialize Servo motor
+  myservo.attach(servoPin);
+
+  // Initialize Ultrasonic Sensor
+  pinMode(trigPin, OUTPUT);
+  pinMode(echoPin, INPUT);
+
+  // Connect to Wi-Fi
+  WiFi.begin(ssid, password);
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(1000);
+    Serial.println("Connecting to WiFi...");
+  }
+  Serial.println("Connected to WiFi");
+
+  // Serve HTML page
+  server.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
+    int angle = myservo.read();
+    int distance = measureDistance();
+    String html = generateHTML(angle, distance);
+    request->send(200, "text/html", html);
+  });
+
+  // Handle setting angle
+  server.on("/set", HTTP_GET, [](AsyncWebServerRequest *request){
+    if (request->hasParam("angle")) {
+      String angleStr = request->getParam("angle")->value();
+      int angle = angleStr.toInt();
+      myservo.write(angle);
+    }
+    request->redirect("/");
+  });
+
+  // Start server
+  server.begin();
+}
+
+void loop() {
+  // Measure distance
+  distance = measureDistance();
+  delay(1000);
+}
