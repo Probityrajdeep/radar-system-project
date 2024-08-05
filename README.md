@@ -1,272 +1,105 @@
-# radar-system-project
-# 📡 Radar System Project with ESP32 and ESP8266
-
+📡 Radar System Project with ESP32 and ESP8266
 Welcome to the Radar System Project! This project uses an ESP32 and an ESP8266 to create a radar system that can detect objects and display the radar data on a web interface. 🎯
 
-## 🚀 Project Overview
-
+📋 Table of Contents
+Project Overview
+Components
+Schematic
+Code Structure
+How to Use
+Web Interface
+Troubleshooting
+Conclusion
+Future Improvements
+Contributing
+🚀 Project Overview
 This project consists of the following components:
-- **ESP32**: Hosts the web server and controls the servo motor.
-- **ESP8266**: Controls the servo motor and connects to the Wi-Fi network.
-- **Servo Motor**: Rotates to scan the area.
-- **Ultrasonic Sensor**: Detects objects in the scanning area.
-- **Web Interface**: Displays the radar data.
 
-## 🛠️ Components
+ESP32: Hosts the web server and controls the servo motor.
+ESP8266: Connects to the Wi-Fi network and also controls the servo motor.
+Servo Motor: Rotates to scan the area.
+Ultrasonic Sensor: Detects objects in the scanning area.
+Web Interface: Displays the radar data.
+🛠️ Components
+ESP32
+ESP8266
+Servo Motor
+Ultrasonic Sensor
+Breadboard
+Jumper Wires
+240 Ohm Resistor
+📑 Code Structure
+The code for this project is divided into two main parts:
 
-- ESP32
-- ESP8266
-- Servo Motor
-- Ultrasonic Sensor
-- Breadboard
-- Jumper Wires
-- 240 Ohm Resistor
-- 
-ESP32 code
-#include <WiFi.h>
-#include <ESPAsyncWebServer.h>
-#include <Servo.h>
+ESP32
+The ESP32 is responsible for:
 
-// Network credentials
-const char* ssid = "your_SSID";
-const char* password = "your_PASSWORD";
-
-// Create AsyncWebServer object on port 80
-AsyncWebServer server(80);
-
-// Define Servo motor
-Servo myservo;
-const int servoPin = 13;
-
-// Define Ultrasonic Sensor pins
-const int trigPin = 5;
-const int echoPin = 18;
-
-// Variables for calculating distance
-long duration;
-int distance;
-
-// Variable to store HTML content
-String html = "";
-
-// Function to measure distance
-int measureDistance() {
-  digitalWrite(trigPin, LOW);
-  delayMicroseconds(2);
-  digitalWrite(trigPin, HIGH);
-  delayMicroseconds(10);
-  digitalWrite(trigPin, LOW);
-  duration = pulseIn(echoPin, HIGH);
-  return duration * 0.034 / 2;
-}
-
-// Function to generate HTML content
-String generateHTML(int angle, int distance) {
-  String html = "<html><head><title>Radar</title></head><body>";
-  html += "<h1>Radar Data</h1>";
-  html += "<p>Angle: " + String(angle) + " degrees</p>";
-  html += "<p>Distance: " + String(distance) + " cm</p>";
-  html += "<button onclick=\"location.href='/set?angle=15'\">Set Angle to 15</button>";
-  html += "<button onclick=\"location.href='/set?angle=125'\">Set Angle to 125</button>";
-  html += "</body></html>";
-  return html;
-}
-
-void setup() {
-  // Initialize Serial Monitor
-  Serial.begin(115200);
-
-  // Initialize Servo motor
-  myservo.attach(servoPin);
-
-  // Initialize Ultrasonic Sensor
-  pinMode(trigPin, OUTPUT);
-  pinMode(echoPin, INPUT);
-
-  // Connect to Wi-Fi
-  WiFi.begin(ssid, password);
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(1000);
-    Serial.println("Connecting to WiFi...");
-  }
-  Serial.println("Connected to WiFi");
-
-  // Serve HTML page
-  server.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
-    int angle = myservo.read();
-    int distance = measureDistance();
-    String html = generateHTML(angle, distance);
-    request->send(200, "text/html", html);
-  });
-
-  // Handle setting angle
-  server.on("/set", HTTP_GET, [](AsyncWebServerRequest *request){
-    if (request->hasParam("angle")) {
-      String angleStr = request->getParam("angle")->value();
-      int angle = angleStr.toInt();
-      myservo.write(angle);
-    }
-    request->redirect("/");
-  });
-
-  // Start server
-  server.begin();
-}
-
-void loop() {
-  // Measure distance
-  distance = measureDistance();
-  delay(1000);
-}
-
+Hosting the web server.
+Displaying the radar data.
+Controlling the servo motor.
 ESP8266
 The ESP8266 is responsible for:
 
 Connecting to the Wi-Fi network.
 Controlling the servo motor.
-
-Copy code
-// ESP8266 main.ino
-#include <ESP8266WiFi.h>
-#include <Servo.h>
-#include <ESP8266WiFi.h>
-#include <Servo.h>
-
-// Network credentials
-const char* ssid = "your_SSID";
-const char* password = "your_PASSWORD";
-
-// Define Servo motor
-Servo myservo;
-const int servoPin = D4;
-
-// Variables for storing data
-WiFiServer server(80);
-String header;
-
-void setup() {
-  // Initialize Serial Monitor
-  Serial.begin(115200);
-
-  // Initialize Servo motor
-  myservo.attach(servoPin);
-
-  // Connect to Wi-Fi
-  WiFi.begin(ssid, password);
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(1000);
-    Serial.println("Connecting to WiFi...");
-  }
-  Serial.println("Connected to WiFi");
-  Serial.println(WiFi.localIP());
-
-  // Start server
-  server.begin();
-}
-
-void loop() {
-  WiFiClient client = server.available();
-  if (client) {
-    String currentLine = "";
-    while (client.connected()) {
-      if (client.available()) {
-        char c = client.read();
-        header += c;
-        if (c == '\n') {
-          if (currentLine.length() == 0) {
-            if (header.indexOf("GET /15") >= 0) {
-              myservo.write(15);
-            } else if (header.indexOf("GET /125") >= 0) {
-              myservo.write(125);
-            }
-            client.println("HTTP/1.1 200 OK");
-            client.println("Content-type:text/html");
-            client.println();
-            client.println("<html><body><h1>Servo Control</h1>");
-            client.println("<p><a href=\"/15\">Set to 15 degrees</a></p>");
-            client.println("<p><a href=\"/125\">Set to 125 degrees</a></p>");
-            client.println("</body></html>");
-            break;
-          } else {
-            currentLine = "";
-          }
-        } else if (c != '\r') {
-          currentLine += c;
-        }
-      }
-    }
-    header = "";
-    client.stop();
-  }
-}
-
-
 📷 Schematic
+Here's a diagram to help you set up the components correctly:
+
+
+🚀 How to Use
+Clone the Repository:
+
+sh
+Copy code
+git clone https://github.com/Probityrajdeep/radar-system-project.git
+📁 This will download the project files to your local machine.
+
+Open the Code:
+Open the code in your preferred IDE (e.g., Arduino IDE). 🖥️
+
+Configure Wi-Fi Credentials:
+In both ESP32 and ESP8266 code files, replace your_SSID and your_PASSWORD with your Wi-Fi network credentials. 🌐
+
+Upload the Code:
+Upload the respective code files to the ESP32 and ESP8266. 📲
+
+Assemble the Components:
+Connect the components as per the schematic. Make sure everything is securely connected. 🔧
+
+Power Up the Devices:
+Plug in your ESP32 and ESP8266 to your power source. 🔋
+
+Access the Web Interface:
+Find the IP address of the ESP32 from the serial monitor, then open this IP address in your web browser to access the radar interface. 🌍
 
 🌐 Web Interface
 The web interface allows you to view the radar data and control the servo motor. Here's an example of what it looks like:
 
 
-📦 Getting Started
-Clone the repository:
-
-Copy code
-git clone https://github.com/Probityrajdeep/radar-system-project
-Open the code in your preferred IDE (e.g., Arduino IDE).
-
-Upload the code to the ESP32 and ESP8266.
-
-Connect the components as per the schematic.
-
-Access the web interface via the IP address provided by the ESP32.
-
+Features:
+Real-Time Data: View real-time radar data and object detection.
+Control Servo Motor: Set the angle of the servo motor directly from the web interface.
+Interactive Buttons: Use buttons to quickly set predefined angles.
 🔧 Troubleshooting
-If you encounter any issues, check the following:
+If you encounter any issues:
 
-Ensure all connections are secure.
-Verify the Wi-Fi credentials.
-Check the serial monitor for any error messages.
+Check Connections: Ensure all hardware connections are secure and correct.
+Verify Wi-Fi Credentials: Double-check the SSID and password in the code.
+Monitor Serial Output: Use the serial monitor to view error messages and debug information.
+Restart Devices: Sometimes a simple restart can resolve connectivity issues.
+Consult the Community: Feel free to open an issue on this GitHub repository for help from the community.
 🎉 Conclusion
-Enjoy building and using your radar system! If you have any questions or suggestions, feel free to open an issue or submit a pull request.
+Congratulations on building your own radar system! This project demonstrates the power of IoT using ESP32 and ESP8266 microcontrollers. It provides a practical way to learn about web servers, servo motors, and ultrasonic sensors. Enjoy exploring the capabilities of your new radar system! If you have any questions or suggestions, feel free to open an issue or submit a pull request.
+
+🚀 Future Improvements
+Looking to expand this project? Here are some ideas:
+
+Enhanced UI: Improve the web interface for a better user experience.
+Mobile App: Develop a mobile app to control and view the radar data.
+Data Logging: Implement data logging to record radar data over time.
+Multiple Sensors: Integrate additional sensors for more comprehensive monitoring.
+🤝 Contributing
+We welcome contributions to enhance this project! If you have any ideas, feel free to fork the repository and submit a pull request. Let's build something amazing together! 💪
 
 Made with ❤️ by Rajdeep
 
-Copy code
-
-### Steps to Create and Upload to GitHub
-
-1. Create a new repository on GitHub with a name like `radar-system-project`.
-
-2. Clone the repository to your local machine:
-    ```sh
-    https://github.com/Probityrajdeep/radar-system-project
-        ```
-
-3. Navigate to the repository directory:
-    ```sh
-    cd radar-system-project
-    ```
-
-4. Create the project structure:
-    ```sh
-    mkdir -p code/ESP32 code/ESP8266 images
-    ```
-
-5. Add your code files (`main.ino` for both ESP32 and ESP8266) to the respective directories.
-
-6. Add any images (schematic, radar example) to the `images` directory.
-
-7. Create the `README.md` file with the content provided above.
-
-8. Add all files to the repository and commit the changes:
-    ```sh
-    git add .
-    git commit -m "Initial commit"
-    ```
-
-9. Push the changes to GitHub:
-    ```sh
-    git push origin main
-    ```
-
-This will create a well-organized GitHub repository with an attractive README file for your radar system proje
