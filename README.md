@@ -102,4 +102,3 @@ Multiple Sensors: Integrate additional sensors for more comprehensive monitoring
 We welcome contributions to enhance this project! If you have any ideas, feel free to fork the repository and submit a pull request. Let's build something amazing together! 💪
 
 Made with ❤️ by Rajdeep
-
