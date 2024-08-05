@@ -29,4 +29,16 @@ This project consists of the following components:
 The ESP32 is responsible for:
 - Hosting the web server.
 - Displaying the radar data.
-- Controlling the servo motor.
+- Controlling the servo motor.Project Structure
+Copy code
+radar-system-project/
+├── code/
+│   ├── ESP32/
+│   │   ├── main.ino
+│   ├── ESP8266/
+│   │   ├── main.ino
+├── images/
+│   ├── schematic.png
+│   ├── radar_example.png
+├── README.md
+- 
