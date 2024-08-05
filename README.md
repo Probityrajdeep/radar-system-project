@@ -1,7 +1,3 @@
-# Radar System Project
-
-![Radar System](https://via.placeholder.com/800x200.png?text=Radar+System+Project)
-
 ## Overview
 
 This project demonstrates a radar system using an ESP32 and ultrasonic sensor. The radar data is displayed on a web interface hosted on the ESP32.
